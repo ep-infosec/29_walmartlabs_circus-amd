@@ -1,0 +1,41 @@
+!(function() {
+  if (!window.define) {
+    return;
+  }
+
+  // Our loader. This lets us load circus chunks and components in response to an amd load
+  // operation. This is connected to the exports via the init interation defined in the
+  // segement below.
+  define('circus-chunk', {
+    load: function(name, req, onload) {
+      var match = /^(.+)_(\d+)$/.exec(name),
+          componentName = match[1];
+
+      // Load the component itself
+      loadComponent(componentName, function(component) {
+        // Load the chunk for this component
+        if (!component.e) {
+          onload();
+        } else {
+          component.e(match[2], function() {
+            onload();
+          });
+        }
+      });
+    }
+  });
+
+  // Report the modules that we export and what chunks must load to load them.
+  for (var componentName in moduleExports) {
+    var exports = moduleExports[componentName],
+        chunks = moduleChunks[componentName];
+
+    for (var name in exports) {
+      (function(componentName, name) {
+        define(name, ['circus-chunk!' + componentName + '_' + (chunks === true ? 0 : chunks[exports[name]])], function() {
+          return installedComponents[componentName](name);
+        });
+      })(componentName, name);
+    }
+  }
+})();
